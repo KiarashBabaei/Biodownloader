@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "biodownloader"
+version = "0.1.0"
+description = "Python toolkit for fetching GEO / SRA / ENA metadata into structured tables."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+  { name = "Kiarash Babaei" }
+]
+keywords = ["bioinformatics", "RNA-seq", "GEO", "SRA", "ENA", "metadata", "NGS"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "License :: OSI Approved :: MIT License",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering :: Bio-Informatics"
+]
+
+dependencies = [
+  "requests>=2.31.0",
+  "pandas>=2.0.0"
+]
+
+[project.scripts]
+biofetch = "biodownloader.cli:main"
+
