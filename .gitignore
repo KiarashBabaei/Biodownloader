@@ -1,0 +1,19 @@
+# venv
+.venv/
+testenv/
+env/
+*.egg-info/
+__pycache__/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# IDE stuff
+.vscode/
+.idea/
+
+# MacOS
+.DS_Store
+
