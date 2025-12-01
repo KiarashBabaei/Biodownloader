@@ -1,70 +1,99 @@
-BioDownloader – README Files
-Below are two complete README versions: one optimized for GitHub, and one optimized for PyPI. You can copy each into the appropriate platform without modification.
- 
- README (GitHub Version – Full, Rich, Detailed)
 BioDownloader
-A lightweight Python toolkit for downloading and integrating GEO, SRA, and ENA metadata.
-BioDownloader provides: - 🔍 GEO metadata extraction (GSE/GSM) - 🎛 SRA RunInfo retrieval (via NCBI SRA API) - 🌐 ENA run‑level metadata queries - 🔗 Optional GEO–SRA auto‑merge (best‑effort GSM matching) - 🧪 CLI tool (biofetch) for terminal‑based data retrieval
-The library is designed to be simple, pure‑Python, API‑driven, and easily integrable within downstream RNA‑seq workflows.
+A lightweight Python toolkit for programmatic retrieval of structured metadata from GEO, SRA, and ENA. The package provides a clean Python API and a command-line interface (biofetch) for downloading, parsing, and exporting metadata required for downstream RNA‑seq and NGS workflows.
  
 Features
-GEO
-from biodownloader import fetch_geo_series
-geo_df = fetch_geo_series("GSE181294")
-Retrieves GSM metadata (title, organism, characteristics, etc.).
-SRA
-from biodownloader import fetch_sra_bioproject
-sra_df = fetch_sra_bioproject("PRJNA730495")
-Downloads real SRA RunInfo tables directly from NCBI.
-ENA
-from biodownloader import fetch_ena_accession
-ena_df = fetch_ena_accession("SRR23080510")
-Fetches ENA run‑level metadata via the ENA Portal API.
- 
- GEO–SRA Auto‑Merge
-BioDownloader attempts to auto‑detect GSM‑like fields and merge GEO and SRA tables:
-from biodownloader import fetch_and_merge_geo_sra
-merged = fetch_and_merge_geo_sra("GSE181294", "PRJNA730495")
-Important: automatic merging is dataset‑dependent.
-If GSM identifiers do not match (e.g., different GEO series), the merged table will be empty — this is expected behavior.
-You can override detection manually:
-from biodownloader import merge_geo_sra
-merged = merge_geo_sra(
-    geo_df,
-    sra_df,
-    geo_gsm_col="GSM",
-    sra_gsm_col="SampleName",
-)
- 
- Command‑Line Interface (CLI)
-BioDownloader installs a command‑line tool called biofetch.
-GEO example
-biofetch --source geo --id GSE181294 --limit 10 --out geo_meta.csv
-SRA example
-biofetch --source sra --id PRJNA730495 --out sra_meta.csv
-ENA example
-biofetch --source ena --id SRR23080510 --out ena_meta.tsv
+•	Retrieve GEO Series metadata (GSE/GSM) directly via NCBI GEO API.
+•	Fetch SRA RunInfo tables using SRA’s RunInfo interface.
+•	Query ENA run‑level annotations using ENA XML/TSV endpoints.
+•	Unified schema normalization for cross‑database consistency.
+•	Optional GEO–SRA merged metadata for integrated analyses.
+•	Command‑line client (biofetch) for quick export to CSV/TSV.
+•	Fully pure‑Python (no external tools required).
  
 Installation
+BioDownloader is available on PyPI:
 pip install biodownloader
-or from source (development mode):
-pip install -e .
+Verify installation:
+python3 -c "import biodownloader; print(biodownloader.__version__)"
  
-  Project Structure
+Command‑Line Usage (CLI: biofetch)
+BioDownloader includes a CLI for rapid metadata extraction.
+GEO
+biofetch --source geo --id GSE181294 --limit 10 --out geo_metadata.csv
+SRA (BioProject)
+biofetch --source sra --id PRJNA730495 --limit 20 --out sra_runinfo.csv
+ENA
+biofetch --source ena --id SRR23080510 --limit 5 --out ena_meta.tsv
+GEO–SRA Merge
+biofetch --source merge --geo GSE181294 --sra PRJNA730495 --out merged.csv
+ 
+Python API Usage
+BioDownloader exposes simple, high‑level functions.
+GEO Metadata
+from biodownloader import fetch_geo_series
+
+df = fetch_geo_series("GSE181294", limit=5)
+print(df.head())
+SRA RunInfo
+from biodownloader import fetch_sra_bioproject
+
+df = fetch_sra_bioproject("PRJNA730495", limit=10)
+print(df[["Run", "SampleName"]].head())
+ENA Run‑Level Metadata
+from biodownloader import fetch_ena_accession
+
+df = fetch_ena_accession("SRR23080510", limit=3)
+print(df)
+GEO–SRA Integrated Table
+from biodownloader import fetch_and_merge_geo_sra
+
+merged = fetch_and_merge_geo_sra(
+    geo_id="GSE181294",
+    sra_id="PRJNA730495",
+    geo_limit=None,
+    sra_limit=50,
+    how="inner",
+)
+
+print(merged.head())
+ 
+Normalized Output Schema
+GEO Output Columns
+•	GSE, GSM, title, organism, source_name, characteristics
+SRA Output Columns (subset)
+•	Run, SampleName, BioProject, LibraryStrategy, Platform, Model, download_path, size_MB, avgLength, spots
+ENA Output Columns
+•	run_accession, description, accession
+Merged GEO–SRA Columns
+Includes all normalized columns from both data sources, joined on SampleName / GSM.
+ 
+Project Structure
 biodownloader/
-│── __init__.py
-│── geo.py
-│── sra.py
-│── ena.py
-│── integrate.py
-│── cli.py
-└── pyproject.toml
+ ├── geo.py            # GEO metadata retrieval
+ ├── sra.py            # SRA RunInfo fetcher
+ ├── ena.py            # ENA metadata fetcher
+ ├── integrate.py      # GEO–SRA merging
+ ├── cli.py            # biofetch CLI
+ ├── __init__.py       # public API exports
  
- Limitations
-•	Auto‑merge depends entirely on GSM IDs present in both GEO + SRA.
-If they come from unrelated datasets, merge will be empty.
-•	GEO API sometimes changes HTML formatting → parser may need updates.
-•	ENA result structure may vary depending on accession type.
+Tests
+Contains minimal integration tests (CSV comparison / schema validation):
+tests/
+ ├── test_geo.py
+ ├── test_sra.py
+ ├── test_ena.py
+ ├── test_merge.py
+Run tests:
+pytest -q
+ 
+Versioning
+Follows semantic versioning (SemVer): - MAJOR: breaking API changes - MINOR: new features - PATCH: bug fixes
  
 License
 MIT License.
+ 
+Contact
+For issues or feature requests, open a GitHub Issue.
+Repository: https://github.com/KiarashBabaei/BioDownloader
+PyPI: https://pypi.org/project/biodownloader/
+
