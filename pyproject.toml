@@ -4,8 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "biodownloader"
-version = "version = version = version = version = "0.2.2"
-
+version = "version = version = version = version = version = "0.2.2"
 
 description = "Python toolkit for fetching GEO / SRA / ENA metadata into structured tables."
 readme = "README.md"
