@@ -52,6 +52,8 @@ def _parse_geo_soft_quick(raw_text: str, gse_id: str, limit: Optional[int] = Non
                 samples.append(_finalize_sample_dict(current, current_gsm, gse_id))
 
                 if limit is not None and len(samples) >= limit:
+                    current = None
+                    current_gsm = None
                     break
 
             # initialize container for a new sample
@@ -60,6 +62,8 @@ def _parse_geo_soft_quick(raw_text: str, gse_id: str, limit: Optional[int] = Non
                 "organism": [],
                 "source_name": [],
                 "characteristics": [],
+                "BioSample": [],
+                "SRX": [],
             }
             current_gsm = m.group(1)
             continue
@@ -81,6 +85,16 @@ def _parse_geo_soft_quick(raw_text: str, gse_id: str, limit: Optional[int] = Non
         elif line.startswith("!Sample_characteristics_ch1 ="):
             value = line.split("=", 1)[1].strip()
             current["characteristics"].append(value)
+        elif line.startswith("!Sample_relation ="):
+            value = line.split("=", 1)[1].strip()
+            if value.startswith("BioSample:"):
+                m_bs = re.search(r"(SAM[A-Z]+\d+)", value)
+                if m_bs:
+                    current["BioSample"].append(m_bs.group(1))
+            elif value.startswith("SRA:"):
+                m_srx = re.search(r"([SED]RX\d+)", value)
+                if m_srx:
+                    current["SRX"].append(m_srx.group(1))
 
     # finalize and append the last sample if present
     if current is not None and current_gsm is not None:
@@ -88,7 +102,7 @@ def _parse_geo_soft_quick(raw_text: str, gse_id: str, limit: Optional[int] = Non
 
     if not samples:
         return pd.DataFrame(
-            columns=["GSE", "GSM", "title", "organism", "source_name", "characteristics"]
+            columns=["GSE", "GSM", "title", "organism", "source_name", "characteristics", "BioSample", "SRX"]
         )
 
     return pd.DataFrame(samples)
@@ -113,6 +127,8 @@ def _finalize_sample_dict(
         "organism": join_or_empty(raw_dict.get("organism", [])),
         "source_name": join_or_empty(raw_dict.get("source_name", [])),
         "characteristics": join_or_empty(raw_dict.get("characteristics", [])),
+        "BioSample": join_or_empty(raw_dict.get("BioSample", [])),
+        "SRX": join_or_empty(raw_dict.get("SRX", [])),
     }
 
 
@@ -162,7 +178,7 @@ def fetch_geo_series(gse_id: str, limit: int | None = None, timeout: int = 30) -
     if "Series" not in text and "^SAMPLE" not in text:
         # be conservative and return an empty DataFrame with the expected columns
         return pd.DataFrame(
-            columns=["GSE", "GSM", "title", "organism", "source_name", "characteristics"]
+            columns=["GSE", "GSM", "title", "organism", "source_name", "characteristics", "BioSample", "SRX"]
         )
 
     return _parse_geo_soft_quick(text, gse_id=gse_id, limit=limit)

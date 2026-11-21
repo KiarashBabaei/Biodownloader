@@ -9,6 +9,25 @@ import requests
 # ENA Browser API base URL
 ENA_BASE_URL = "https://www.ebi.ac.uk/ena/portal/api/search"
 
+# accession prefix -> searchable field of the ENA "read_run" result
+_PREFIX_TO_FIELD = (
+    (("SRR", "ERR", "DRR"), "run_accession"),
+    (("PRJ",), "study_accession"),
+    (("SRP", "ERP", "DRP"), "secondary_study_accession"),
+    (("SRX", "ERX", "DRX"), "experiment_accession"),
+    (("SAMN", "SAME", "SAMD"), "sample_accession"),
+    (("SRS", "ERS", "DRS"), "secondary_sample_accession"),
+)
+
+
+def _field_for_accession(accession: str) -> Optional[str]:
+    """Return the ENA read_run field that matches this accession type, or None."""
+    acc = accession.strip().upper()
+    for prefixes, field in _PREFIX_TO_FIELD:
+        if acc.startswith(prefixes):
+            return field
+    return None
+
 
 def _ena_query(
     query: str,
@@ -23,7 +42,12 @@ def _ena_query(
         "result": result,
         "query": query,
         "format": "tsv",
-        "limit": 0,  # 0 => no server-side limit
+        "limit": limit if limit is not None else 0,  # 0 => no server-side limit
+        "fields": (
+            "run_accession,study_accession,secondary_study_accession,"
+            "sample_accession,experiment_accession,scientific_name,"
+            "library_strategy,instrument_platform,fastq_ftp,description"
+        ),
     }
 
     resp = requests.get(ENA_BASE_URL, params=params, timeout=timeout)
@@ -80,11 +104,14 @@ def fetch_ena_accession(
     if not accession:
         raise ValueError("accession cannot be empty (e.g., 'SRR23080510' or 'PRJEB12345').")
 
-    # First try a generic accession query
-    df = _ena_query(f"accession={accession}", result="read_run", limit=limit, timeout=timeout)
+    field = _field_for_accession(accession)
 
-    # If nothing found, and it looks like a run accession, try run_accession=...
-    if df.empty and accession.upper().startswith(("SRR", "ERR", "DRR")):
-        df = _ena_query(f"run_accession={accession}", result="read_run", limit=limit, timeout=timeout)
+    df = pd.DataFrame()
+    if field is not None:
+        df = _ena_query(f'{field}="{accession}"', result="read_run", limit=limit, timeout=timeout)
+
+    # Fallback: generic accession query (kept for backward compatibility)
+    if df.empty:
+        df = _ena_query(f"accession={accession}", result="read_run", limit=limit, timeout=timeout)
 
     return df
