@@ -18,3 +18,11 @@ build/
 .DS_Store
 
 .testenv/
+
+# Data and test output
+*.csv
+*.tsv
+
+# Python
+*.pyc
+.pytest_cache/
